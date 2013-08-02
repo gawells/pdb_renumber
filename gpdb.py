@@ -183,56 +183,56 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 
 	chains_inmodified = [uniq(struct.select("resindex %d"%(i)).getChids())[0] for i in resindices]
 	for chain in uniq(chains_inmodified):
+		# iterate over chains, clashes between chains are not a problem
 		newresnums_ch = [newresnums[i] for i in range(len(newresnums)) if chains_inmodified[i] == chain]
-		print newresnums_ch
-		pass
+		# print "DEBUG "+str(newresnums_ch)
 
-	solvent_selstr = "water or name CL NA and (%s) and not protein"%renumbered_selstr
-	hetero_selstr = "hetero and not (%s) and (%s) and not protein"%(solvent_selstr,renumbered_selstr)
-	# not sure what else to treat as bulk solvent, POT?
-	hetero_intersection = []
-	solvent_intersection = []
-	last_biggest = newresnums[-1] 
-	
-	# print chains_inmodified
-
-	hetero = struct.select(hetero_selstr)
-	if hetero:
-		# print uniq(hetero.getChids())
-		# print "DEBUG"%uniq(hetero.getResnums())
-		hetero_resids = uniq(hetero.getResindices())
-		hetero_resids_str = ' '.join(str(i) for i in uniq(hetero.getResindices()))
-		hetero_resnums = uniq(hetero.getResnums())
-		hetero_intersection = [x for x in newresnums if x in hetero_resnums]
-
-	solvent = struct.select(solvent_selstr)
-	if solvent:
-		solvent_resids = uniq(solvent.getResindices())
-		solvent_resids_str = ' '.join(str(i) for i in uniq(solvent.getResindices()))
-		solvent_resnums = uniq(solvent.getResnums())
-		solvent_intersection = [x for x in newresnums if x in solvent_resnums]
-
-	if len (hetero_intersection) > 0:
-		print "WARNING, ligand resnums clash with new resnums"
-		print "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr)
-		# print "DEBUG %s"%hetero_resids
-		# print "DEBUG %s"%hetero_resnums
-		last_biggest = sequential_renumber(struct,hetero_resids,hetero_resids_str,hetero_selstr,last_biggest)
-
-	if len(solvent_intersection) > 0:
-		hetero_newsolvent_intersection = []
-		print "WARNING, solvent resnums clash with new resnums"
-
-		# check for clash between previously ignored ligands and new solvent numbering
-		if hetero_intersection > 0 and hetero:
-			hetero_newsolvent_intersection = [x for x in hetero_resnums if x in range(last_biggest,last_biggest+len(solvent_resids))]
-		if len(hetero_newsolvent_intersection) > 0:
-			print "WARNING, solvent renumbering clashes with ligands"
-			print "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr)
-			last_biggest = sequential_renumber(struct,hetero_resids,hetero_resids_str,hetero_selstr,last_biggest)
+		solvent_selstr = "water or name CL NA and (%s) and chain %s and not protein"%(renumbered_selstr,chain)
+		hetero_selstr = "hetero and not (%s) and (%s) and chain %s not protein"%(solvent_selstr,renumbered_selstr,chain)
+		# not sure what else to treat as bulk solvent, POT?
+		hetero_intersection = []
+		solvent_intersection = []
+		last_biggest = newresnums[-1] 
 		
-		print "Renumbering solvent from %d"%(last_biggest+1)
-		sequential_renumber(struct,solvent_resids,solvent_resids_str,solvent_selstr,last_biggest)	
+		# print chains_inmodified
+
+		hetero = struct.select(hetero_selstr)
+		if hetero:
+			# print uniq(hetero.getChids())
+			# print "DEBUG"%uniq(hetero.getResnums())
+			hetero_resids = uniq(hetero.getResindices())
+			hetero_resids_str = ' '.join(str(i) for i in uniq(hetero.getResindices()))
+			hetero_resnums = uniq(hetero.getResnums())
+			hetero_intersection = [x for x in newresnums if x in hetero_resnums]
+
+		solvent = struct.select(solvent_selstr)
+		if solvent:
+			solvent_resids = uniq(solvent.getResindices())
+			solvent_resids_str = ' '.join(str(i) for i in uniq(solvent.getResindices()))
+			solvent_resnums = uniq(solvent.getResnums())
+			solvent_intersection = [x for x in newresnums if x in solvent_resnums]
+
+		if len (hetero_intersection) > 0:
+			print "WARNING, ligand resnums clash with new resnums"
+			print "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr)
+			# print "DEBUG %s"%hetero_resids
+			# print "DEBUG %s"%hetero_resnums
+			last_biggest = sequential_renumber(struct,hetero_resids,hetero_resids_str,hetero_selstr,last_biggest)
+
+		if len(solvent_intersection) > 0:
+			hetero_newsolvent_intersection = []
+			print "WARNING, solvent resnums clash with new resnums"
+
+			# check for clash between previously ignored ligands and new solvent numbering
+			if hetero_intersection > 0 and hetero:
+				hetero_newsolvent_intersection = [x for x in hetero_resnums if x in range(last_biggest,last_biggest+len(solvent_resids))]
+			if len(hetero_newsolvent_intersection) > 0:
+				print "WARNING, solvent renumbering clashes with ligands"
+				print "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr)
+				last_biggest = sequential_renumber(struct,hetero_resids,hetero_resids_str,hetero_selstr,last_biggest)
+			
+			print "Renumbering solvent from %d"%(last_biggest+1)
+			sequential_renumber(struct,solvent_resids,solvent_resids_str,solvent_selstr,last_biggest)	
 
 def renumber_struct(struct,seq,selection="chain A"):
 	'''
