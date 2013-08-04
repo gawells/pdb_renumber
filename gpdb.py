@@ -177,7 +177,7 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 	Does not yet deal with multiple chains. Also need to cater for modified amino acids 
 
 	Note: HETATM records that contain standard amino acids not recognised as hetero in selection 
-	algebra. 
+	algebra. Use "hetatm" instead of "hetero"
 
 	'''
 
@@ -187,9 +187,10 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 		newresnums_ch = [newresnums[i] for i in range(len(newresnums)) if chains_inmodified[i] == chain]
 		# print "DEBUG "+str(newresnums_ch)
 
-		solvent_selstr = "water or name CL NA and (%s) and chain %s and not protein"%(renumbered_selstr,chain)
-		hetero_selstr = "hetero and not (%s) and (%s) and chain %s not protein"%(solvent_selstr,renumbered_selstr,chain)
+		solvent_selstr = "water or name CL NA and chain %s and not protein"%(chain)
 		# not sure what else to treat as bulk solvent, POT?
+		hetero_selstr = "(hetatm) and not (%s) and chain %s"%(solvent_selstr,chain)
+		# use hetatm instead of hetero to pick up amino acid ligands
 		hetero_intersection = []
 		solvent_intersection = []
 		last_biggest = newresnums[-1] 
@@ -198,6 +199,8 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 
 		hetero = struct.select(hetero_selstr)
 		if hetero:
+			ligands = ', '.join(i for i in uniq(hetero.getResnames()))
+			print "Found the following ligands in chain %s: %s"%(chain,ligands)
 			# print uniq(hetero.getChids())
 			# print "DEBUG"%uniq(hetero.getResnums())
 			hetero_resids = uniq(hetero.getResindices())
