@@ -21,6 +21,15 @@ oneletter = {
 '''
 Non-standard amino acids can be extended in prody with AddNonstdAminoacid()
 Must have a CA atom (can set C1 of PYR to CA, but must be done before extending the list)
+
+What is the actual IUPAC one letter code for selenothemionine etc?
+This one seems to be complete:
+https://raw.github.com/Pymol-Scripts/Pymol-script-repo/master/findseq.py
+
+TODO:
+- altlocs
+- anisou 
+- secondary structure
 '''
 
 def uniq(seq):
