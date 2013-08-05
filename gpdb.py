@@ -17,7 +17,7 @@ oneletter = {
 'SEC':'U','SEP':'S','TPO':'T','PTR':'Y',
 'XLE':'J','XAA':'X'
 }
-#"PYR":'O'
+
 '''
 Non-standard amino acids can be extended in prody with AddNonstdAminoacid()
 Must have a CA atom (can set C1 of PYR to CA, but must be done before extending the list)
@@ -27,9 +27,10 @@ This one seems to be complete:
 https://raw.github.com/Pymol-Scripts/Pymol-script-repo/master/findseq.py
 
 TODO:
-- altlocs
-- anisou 
-- secondary structure
+Looks like this will required some changes to prody or subclassing:
+- preserve altlocs in output
+- preserve anisou in output
+- preserve secondary structure in output
 '''
 
 def uniq(seq):
