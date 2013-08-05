@@ -44,7 +44,7 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pd
 
 	modified_selections = []
 	for polymer in selections:
-		currentSelection = structure.select("not hetero and protein and name CA and %s"%polymer)
+		currentSelection = structure.select("protein and name CA and %s"%polymer)
 		if currentSelection:
 			pdbseq_str=''.join([oneletter[i] for i in currentSelection.getResnames()])
 			pdbseqRec=SeqRecord(Seq(pdbseq_str,IUPAC.protein),id=pdbfile)
@@ -120,11 +120,11 @@ def updateAA(struct,newAAstr):
 	if newAAstr:
 		newAAs = newAAstr.split(',')
 		for newAA in newAAs:
-			if newAA:
-				if len(newAA) > 4:
-					updateAATable(struct,newAA[0:3], newAA[3],CA=newAA[4:])
-				else:
-					updateAATable(struct,newAA[0:3], newAA[3])		
+			# if newAA:
+			if len(newAA) > 4:				
+				updateAATable(struct,newAA[0:3], newAA[3],CA=newAA[4:])
+			else:
+				updateAATable(struct,newAA[0:3], newAA[3])		
 
 
 def main():

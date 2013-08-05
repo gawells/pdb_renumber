@@ -179,9 +179,10 @@ def increment_clash(newresnums,resindices,struct,renumbered_sel="protein"):
 def sequential_renumber(struct,resindex,resindex_str,selection,number_from):
 	newclashNums = []
 	last_biggest = number_from
+	
 	for resn in resindex:
 		last_biggest += 1
-	 	natoms = struct.select("resindex %d and (%s)"%(resn,selection)).numAtoms()
+ 		natoms = struct.select("resindex %d and (%s)"%(resn,selection)).numAtoms()
 	 	newclashNums += [last_biggest]*natoms
 	# print "DEBUG %s"%newclashNums
 
@@ -202,21 +203,20 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 
 	'''
 
+	# print struct.select("resindex 810 and ((water or name CL NA) and chain A and not protein)").numAtoms()
 	chains_inmodified = [uniq(struct.select("resindex %d"%(i)).getChids())[0] for i in resindices]
 	for chain in uniq(chains_inmodified):
 		# iterate over chains, clashes between chains are not a problem
 		newresnums_ch = [newresnums[i] for i in range(len(newresnums)) if chains_inmodified[i] == chain]
 		# print "DEBUG "+str(newresnums_ch)
 
-		solvent_selstr = "water or name CL NA and chain %s and not protein"%(chain)
+		solvent_selstr = "(water or name CL NA) and chain %s and not protein"%(chain)
 		# not sure what else to treat as bulk solvent, POT?
-		hetero_selstr = "(hetatm) and not (%s) and chain %s"%(solvent_selstr,chain)
+		hetero_selstr = "(hetatm) and not (%s) and chain %s and not protein"%(solvent_selstr,chain)
 		# use hetatm instead of hetero to pick up amino acid ligands
 		hetero_intersection = []
 		solvent_intersection = []
-		last_biggest = newresnums[-1] 
-		
-		# print chains_inmodified
+		last_biggest = newresnums_ch[-1] 
 
 		hetero = struct.select(hetero_selstr)
 		if hetero:
@@ -232,6 +232,8 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 		solvent = struct.select(solvent_selstr)
 		if solvent:
 			solvent_resids = uniq(solvent.getResindices())
+			# print solvent_resids
+
 			solvent_resids_str = ' '.join(str(i) for i in uniq(solvent.getResindices()))
 			solvent_resnums = uniq(solvent.getResnums())
 			solvent_intersection = [x for x in newresnums if x in solvent_resnums]
