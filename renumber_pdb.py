@@ -14,7 +14,8 @@ import tempfile
 from gpdb import *
 import gpdb
 
-def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pdb"):
+
+def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pdb",newAA=None):
 	'''
 	Renumber pdb file (pdbfile) according to reference sequence in refseqfile. 
 	Pdb sequence is extracted and aligned with reference sequence using needle 
@@ -36,6 +37,7 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pd
 
 	if os.path.exists(pdbfile):
 		structure=parsePDB("%s"%pdbfile)
+		updateAA(structure,newAA)
 	else:
 		print "ERROR, no such file: %s"%pdbfile
 		exit(1)
@@ -69,7 +71,7 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pd
 		print "Wrote renumbered %s selections from %s to %s"%(str(modified_selections),pdbfile,outfile)
 	os.remove(tmp_refseqfile)
 
-def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbered.pdb",pdbfile=""):
+def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbered.pdb",pdbfile="",newAA=None):
 	selections = selection.split(",")
 	tmp=tempfile.gettempdir()
 
@@ -89,6 +91,7 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbe
 		if pdbfile != '':
 			if os.path.exists(pdbfile):
 				structure = parsePDB(pdbfile)
+				updateAA(structure,newAA)
 			else:
 				print "ERROR, no such pdb file: %s"%pdbfile
 				exit(1)
@@ -113,6 +116,17 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbe
 	if writePDB(outfile, structure):
 		print "Wrote renumbered %s selections from %s to %s"%(str(modified_selections),pdbfile,outfile)
 
+def updateAA(struct,newAAstr):
+	if newAAstr:
+		newAAs = newAAstr.split(',')
+		for newAA in newAAs:
+			if newAA:
+				if len(newAA) > 4:
+					updateAATable(struct,newAA[0:3], newAA[3],CA=newAA[4:])
+				else:
+					updateAATable(struct,newAA[0:3], newAA[3])		
+
+
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-s","--structure",type=str,help="PDB file to be renumbered. Defaults to <pdbseq>.pdb when used with \'-a\'")
@@ -123,6 +137,8 @@ def main():
 	parser.add_argument("-v","--selections",type=str,help="Comma separated list of vmd atomselections in "\
 		"double quotes. Each selection will be renumbered according to the alignment",default="protein")
 	parser.add_argument("-o","--outfile",type=str,help="Output .pdb filename",default="renumbered.pdb")
+	parser.add_argument("-n","--newres",type=str,help="Add a new residue to the table of non-standard amino acids: XXXYZ[Z]."\
+		" XXX = three-letter abbreviation, Y = one-letter abbreviation, Z[Z] = atom to relabel as CA (if needed)",default=None)
 
 	# combinations: -a -s -p -r / -s -r -v
 
@@ -131,13 +147,15 @@ def main():
 
 	# if args.outfile:
 	# 		kwargs['outfile'] = args.outfile
+
 	if args.pdbseq and not args.outfile:
 		kwargs['outfile'] = "%s.renumbered.pdb"%args.pdbseq
 	elif args.outfile:
 		kwargs['outfile'] = args.outfile
 
-	if not args.selections:
-		args.selections = "protein"
+	kwargs['newAA'] = args.newres
+	# if not args.selections:
+	# 	args.selections = "protein"
 
 	if args.alignment:		
 		if not args.pdbseq or not args.refseq:

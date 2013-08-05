@@ -12,7 +12,16 @@ oneletter = {
 'CYS':'C','THR':'T','SER':'S','MET':'M',
 'TRP':'W','PHE':'F','TYR':'Y','HIS':'H',
 'ALA':'A','VAL':'V','LEU':'L','ILE':'I',
+'ASX':'B','GLX':'Z','CSO':'C','HIP':'H',
+'HSD':'H','HSE':'H','HSP':'H','MSE':'M',
+'SEC':'U','SEP':'S','TPO':'T','PTR':'Y',
+'XLE':'J','XAA':'X'
 }
+#"PYR":'O'
+'''
+Non-standard amino acids can be extended in prody with AddNonstdAminoacid()
+Must have a CA atom (can set C1 of PYR to CA, but must be done before extending the list)
+'''
 
 def uniq(seq):
     '''
@@ -23,6 +32,18 @@ def uniq(seq):
     seen_add = seen.add 
     return [x for x in seq if x not in seen and not seen_add(x)]
 
+def updateAATable(struct,threeletterAbbrv,oneletterAbbrv,CA='CA'):
+	'''
+	Update table of nonstandard amino acids inherited from prody and oneletterAbbrv dictionary.
+	If corresponding residues don't have a CA at set another to this first. Eg set C1 to CA in pyr of adometdc
+
+	'''
+
+	print "Adding non-standard amino acid %s:%s, %s set to CA"%(threeletterAbbrv,oneletterAbbrv,CA)
+	struct.select("resname %s and name %s"%(threeletterAbbrv,CA)).setNames("CA")
+	addNonstdAminoacid(threeletterAbbrv)
+	oneletter.update({threeletterAbbrv:oneletterAbbrv})
+	pass
 
 def seqnum(aln,seqid):
 	'''
