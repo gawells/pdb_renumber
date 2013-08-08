@@ -100,7 +100,7 @@ proc heterofit {{mol1 0} {mol2 1} {sel1 "protein"} {sel2 "protein"} {frame now}}
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-a","--alignment",type=str,help="Multiple alignment to use for renumbering (fasta format)")	
+ 	parser.add_argument("-a","--alignment",type=str,help="Multiple alignment to use for renumbering (fasta format)")	
 	parser.add_argument("-p1","--pdbseq1",type=str,help="Sequence id of first sequence renumber.")
 	parser.add_argument("-p2","--pdbseq2",type=str,help="Sequence id of second sequence renumber.")
 	parser.add_argument("-r1","--refseq1",type=str,help="Reference sequence id for first sequence.")

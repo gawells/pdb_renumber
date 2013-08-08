@@ -1,0 +1,1 @@
+~/bin/matplotlib/renumber_pdb.py -s $x.pdb  -v "chain B","chain D" -r ~dn/Sequences/GluN2A_rattusN.fasta -o test.pdb; ~/bin/matplotlib/renumber_pdb.py -s test.pdb -v "chain A","chain C" -r ~dn/Sequences/GluN1-4A_rattusN.fasta -o $x.renumbered.pdb;
