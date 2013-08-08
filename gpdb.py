@@ -103,6 +103,10 @@ def overlap(aln,seqid1,seqid2):
 	return l
 
 def vmdsliceToReslist (vmdslice):
+	'''
+	Convert resnum selection in vmd to list
+
+	'''
 	words = vmdslice.split(" ")
 	numlist = []
 	last = None
@@ -123,6 +127,7 @@ def vmdsliceToReslist (vmdslice):
 def vmdslice(l):
 	'''
 	Return list of values as compressed slice in vmd selection algebra
+
 	'''
 	i = l[0]
 	begin = i
@@ -151,6 +156,41 @@ def vmdslice(l):
 		s = s + "%d to %d "%(begin,end)
 	else:
 		s = s + " %d"%(begin)		
+	
+	return s
+
+def pymol_slice(l):
+	'''
+	Return list of values as compressed slice in pymol selection algebra
+
+	'''
+	i = l[0]
+	begin = i
+	# s = str(i)
+	s = ""
+	in_interval=0
+	for j in l[1:]:
+		if j-i == 1 :
+			in_interval = 1
+			end = j
+		elif j -i > 1:			
+			if in_interval == 1:
+				end = i
+				if end - begin >= 2:
+					s = s + "%d-%d,"%(begin,end)
+				else:
+					s = s + "%d,%d,"%(begin,end)		
+				begin = j
+				in_interval = 0
+			else:
+				begin = j
+				s = s + "%d,"%i
+		i = j
+
+	if end - begin >= 2:
+		s = s + "%d-%d,"%(begin,end)
+	else:
+		s = s + ",%d"%(begin)		
 	
 	return s
 

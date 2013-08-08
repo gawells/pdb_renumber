@@ -13,6 +13,80 @@ import tempfile
 from gpdb import *
 import gpdb
 
+def writevmd_script(filename,pdbid1,pdbid2,slice1,slice2):
+	vmdscript = open(filename,"w")
+
+	vmdscript.write('''
+proc heterofit {{mol1 0} {mol2 1} {sel1 "protein"} {sel2 "protein"} {frame now}} {
+# mol2 is stationary
+    set list1 [[atomselect $mol1 "$sel1 and name CA"] get resid]
+    set list2 [[atomselect $mol2 "$sel2 and name CA"] get resid]
+
+    set fit1 [atomselect $mol1 "$sel1 and name CA"]
+    set fit2 [atomselect $mol2 "$sel2 and name CA"]
+
+    set moveby [measure fit $fit1 $fit2]
+
+    [atomselect $mol1 "all" frame $frame] move $moveby
+}
+
+''')
+	vmdscript.write('proc fit_%s_to_%s {{mol1} {mol2} {sel1 \"protein\"} {sel2 \"protein\"}} {\n'%(pdbid1,pdbid2))
+	vmdscript.write("# Fit %s to %s \n"%(pdbid1,pdbid2))
+	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid1)
+	vmdscript.write('\tputs [[atomselect $mol1 \"resid %s and name CA and $sel1\" ] num]\n'%vmdslice(slice1))
+	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid2)
+	vmdscript.write('\tputs [[atomselect $mol2 "resid %s and name CA and $sel2" ] num]\n'%vmdslice(slice2))
+	vmdscript.write('\theterofit $mol1 $mol2 "resid %s and $sel1" "resid %s and $sel2"\n'%(vmdslice(slice1),vmdslice(slice2)))
+	vmdscript.write("}\n\n")
+
+	# vmdscript.write("proc fit_%s_to_%s {mol1 mol2} {\n"%(pdbid2,pdbid1))
+	vmdscript.write('proc fit_%s_to_%s {{mol1} {mol2} {sel1 \"protein\"} {sel2 \"protein\"}} {\n'%(pdbid2,pdbid1))
+	vmdscript.write("# Fit %s to %s \n"%(pdbid2,pdbid1))
+	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid2)
+	vmdscript.write("\tputs [[atomselect $mol1 \"resid %s and name CA and $sel1\" ] num]\n"%vmdslice(slice2))
+	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid1)
+	vmdscript.write('\tputs [[atomselect $mol2 "resid %s and name CA and $sel2" ] num]\n'%vmdslice(slice1))
+	vmdscript.write('\theterofit $mol1 $mol2 "resid %s and $sel1" "resid %s and $sel2"\n'%(vmdslice(slice2),vmdslice(slice1)))
+	vmdscript.write("}\n\n")
+
+	vmdscript.close()
+	
+	print "VMD script output in %s"%filename	
+
+def write_pymol_script(filename,pdbid1,pdbid2,slice1,slice2):
+
+	pymolscript = open(filename,"w")
+
+	pymolscript.write("import pymol\n")
+
+	# pymolscript.write("def fit_%s_to%s(mol1,mol2):\n"%(pdbid1,pdbid2))
+
+	pymolscript.write('''
+def fit_%s_to_%s(mol1,mol2):
+	cmd.do("select tmp1, name CA and (%s) and (i. %s)"%s)
+	cmd.do("select tmp2, name CA and (%s) and (i. %s)"%s)
+	cmd.do("fit tmp1, tmp2, matchmaker=-1")
+	cmd.delete("tmp1")
+	cmd.delete("tmp2")
+
+cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
+'''%(pdbid1,pdbid2,"%s",pymol_slice(slice1),"%mol1","%s",pymol_slice(slice2),"%mol2",pdbid1,pdbid2,pdbid1,pdbid2))
+
+	pymolscript.write('''
+def fit_%s_to_%s(mol1,mol2):
+	cmd.do("select tmp1, name CA and (%s) and (i. %s)"%s)
+	cmd.do("select tmp2, name CA and (%s) and (i. %s)"%s)
+	cmd.do("fit tmp1, tmp2, matchmaker=-1")
+	cmd.delete("tmp1")
+	cmd.delete("tmp2")
+
+cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
+'''%(pdbid2,pdbid1,"%s",pymol_slice(slice2),"%mol1","%s",pymol_slice(slice1),"%mol2",pdbid2,pdbid1,pdbid2,pdbid1))
+	
+	
+	pymolscript.close()
+
 def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",filter1=None,filter2=None):
 	tmp=tempfile.gettempdir()
 
@@ -33,9 +107,10 @@ def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",fi
 		pdbSeqRec2 = seqbyname(aln, pdbid2)
 		# refSeqRec2 = seqbyname(aln, refid2)
 		
-		resnums1 = pdbSeqRec1.letter_annotations["resnum"] 
+		resnums1 = pdbSeqRec1.letter_annotations["resnum"] 		
 		resnums2 = pdbSeqRec2.letter_annotations["resnum"] 
 
+		#convert filters to vmd-like selection string
 		if filter1:
 			restrict1 = vmdsliceToReslist(filter1)
 		else:	
@@ -48,52 +123,15 @@ def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",fi
 		slice1 = [resnums1[i] for i in common if resnums1[i] in restrict1 and  resnums2[i] in restrict2]
 		slice2 = [resnums2[i] for i in common if resnums1[i] in restrict1 and  resnums2[i] in restrict2]
 
-		# slice1 = [resnums1[i] for i in common]
-		# slice2 = [resnums2[i] for i in common]
-
-		print len(slice1)
-		print len(slice2)
+		print "Number of residues to align in %s: %s"%(pdbid1,len(slice1))
+		print "Number of residues to align in %s: %s"%(pdbid2,len(slice2))
 
 		if writevmd != "" and writevmd != None:
-			vmdscript = open(writevmd,"w")
+			writevmd_script(writevmd,pdbid1,pdbid2,slice1,slice2)
 
-			vmdscript.write('''
-proc heterofit {{mol1 0} {mol2 1} {sel1 "protein"} {sel2 "protein"} {frame now}} {
-# mol2 is stationary
-    set list1 [[atomselect $mol1 "$sel1 and name CA"] get resid]
-    set list2 [[atomselect $mol2 "$sel2 and name CA"] get resid]
-
-    set fit1 [atomselect $mol1 "$sel1 and name CA"]
-    set fit2 [atomselect $mol2 "$sel2 and name CA"]
-
-    set moveby [measure fit $fit1 $fit2]
-
-    [atomselect $mol1 "all" frame $frame] move $moveby
-}
-
-''')
-			vmdscript.write('proc fit_%s_to_%s {{mol1} {mol2} {sel1 \"protein\"} {sel2 \"protein\"}} {\n'%(pdbid1,pdbid2))
-			vmdscript.write("# Fit %s to %s \n"%(pdbid1,pdbid2))
-			vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid1)
-			vmdscript.write('\tputs [[atomselect $mol1 \"resid %s and name CA and $sel1\" ] num]\n'%vmdslice(slice1))
-			vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid2)
-			vmdscript.write('\tputs [[atomselect $mol2 "resid %s and name CA and $sel2" ] num]\n'%vmdslice(slice2))
-			vmdscript.write('\theterofit $mol1 $mol2 "resid %s and $sel1" "resid %s and $sel2"\n'%(vmdslice(slice1),vmdslice(slice2)))
-			vmdscript.write("}\n\n")
-
-			# vmdscript.write("proc fit_%s_to_%s {mol1 mol2} {\n"%(pdbid2,pdbid1))
-			vmdscript.write('proc fit_%s_to_%s {{mol1} {mol2} {sel1 \"protein\"} {sel2 \"protein\"}} {\n'%(pdbid2,pdbid1))
-			vmdscript.write("# Fit %s to %s \n"%(pdbid2,pdbid1))
-			vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid2)
-			vmdscript.write("\tputs [[atomselect $mol1 \"resid %s and name CA and $sel1\" ] num]\n"%vmdslice(slice2))
-			vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid1)
-			vmdscript.write('\tputs [[atomselect $mol2 "resid %s and name CA and $sel2" ] num]\n'%vmdslice(slice1))
-			vmdscript.write('\theterofit $mol1 $mol2 "resid %s and $sel1" "resid %s and $sel2"\n'%(vmdslice(slice2),vmdslice(slice1)))
-			vmdscript.write("}\n\n")
-
-			vmdscript.close()
-
-			print "VMD script output in %s"%writevmd
+		if writepymol != "" and writepymol != None:
+			write_pymol_script(writepymol,pdbid1,pdbid2,slice1,slice2)
+		
 		
 	else:
 		print "we did not arrive"
@@ -106,7 +144,7 @@ def main():
 	parser.add_argument("-r1","--refseq1",type=str,help="Reference sequence id for first sequence.")
 	parser.add_argument("-r2","--refseq2",type=str,help="Reference sequence id for second sequence.")
 	parser.add_argument("-v","--writevmd",type=str,help="Output a vmd .tcl script for fitting")
-	parser.add_argument("-py","--writepymol",action='store_true',help="Output a pymol script for fitting")
+	parser.add_argument("-py","--writepymol",type=str,help="Output a pymol script for fitting")
 	parser.add_argument("-f1","--filter1",type=str,help="Filter first sequence")
 	parser.add_argument("-f2","--filter2",type=str,help="Filter first sequence")
 
