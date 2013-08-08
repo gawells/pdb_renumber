@@ -1,0 +1,42 @@
+My attempt to make a robust script for renumbering PDB files according to their primary sequence. Requires ProDy (http://www.csb.pitt.edu/prody/), EMBOSS (http://emboss.sourceforge.net/) and Biopython (http://biopython.org/wiki/Main_Page). Seems to be robust so far for handling multiple chains, chain breaks/gaps, modified residues and ligand/solvent renumbering that may clash with the new numbers
+
+This can be run in two ways:
+
+- Given a .pdb structure file, reference alignment in .fasta format and chain selections using the VMD selection algebra, it'll create a global alignment using needle from EMBOSS to use for renumbering.
+  - e.g.:
+  renumber_pdb -s structure.pdb -r sequence.fasta -v "chain A","chain B",... -o structure.r.pdb
+
+-  Alternitavely you can supply a pre-existing multiple alignment in .fasta format including the reference sequnce and the entry corresponing to the pdb chain to be renumbered.
+  - e.g.:
+  renumber_pdb -s structure.pdb -a alignment.fasta -r refseqid -p pdbseqid -v "chain A",.... -o structure.r.pdb
+
+
+usage: renumber_pdb.py [-h] [-s STRUCTURE] [-a ALIGNMENT] -r REFSEQ
+                       [-p PDBSEQ] [-v SELECTIONS] [-o OUTFILE] [-n NEWRES]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s STRUCTURE, --structure STRUCTURE
+                        PDB file to be renumbered. Defaults to <pdbseq>.pdb
+                        when used with '-a'
+  -a ALIGNMENT, --alignment ALIGNMENT
+                        Multiple alignment to use for renumbering (fasta
+                        format)
+  -r REFSEQ, --refseq REFSEQ
+                        Reference sequence id (for multiple alginment) or
+                        .fasta file of reference sequence according to which
+                        to renumber. Required.
+  -p PDBSEQ, --pdbseq PDBSEQ
+                        Sequence id to renumber if using an existing multiple
+                        alignment.
+  -v SELECTIONS, --selections SELECTIONS
+                        Comma separated list of vmd atomselections in double
+                        quotes. Each selection will be renumbered according to
+                        the alignment
+  -o OUTFILE, --outfile OUTFILE
+                        Output .pdb filename
+  -n NEWRES, --newres NEWRES
+                        Add a new residue to the table of non-standard amino
+                        acids: XXXYZ[Z]. XXX = three-letter abbreviation, Y =
+                        one-letter abbreviation, Z[Z] = atom to relabel as CA
+                        (if needed)
