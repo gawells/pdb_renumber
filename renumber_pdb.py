@@ -1,13 +1,11 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
-from Bio import AlignIO,SeqIO,ExPASy,SwissProt
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
+from Bio import AlignIO,SeqIO,ExPASy,SwissProt,Seq,SeqRecord
 from Bio.Alphabet import IUPAC
 from Bio.Emboss.Applications import NeedleCommandline
-from prody.proteins.pdbfile import parsePDB, writePDB
+from prody.proteins import parsePDB, writePDB
+import argparse
 import os
 import sys
 import tempfile
@@ -15,11 +13,24 @@ from gpdb import *
 import gpdb
 
 
-def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pdb",newAA=None):
+def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
+	outfile="renumbered.pdb",newAA=None):
 	'''
 	Renumber pdb file (pdbfile) according to reference sequence in refseqfile. 
 	Pdb sequence is extracted and aligned with reference sequence using needle 
-	 from EMBOSS.
+	from EMBOSS.
+	- refseqfile: .fasta file containing the reference sequence by which to 
+	renumber
+	- selection: atom selection(s) in the the structure file to renumber. 
+	Will iterate over comma separated selections to renumber each.
+	- pdbfile: original structure file
+	- outfile: output structure file
+	- newAA: comma separated list of unrepresented amino acids
+		XXXYCA: 
+		XXX = three letter abbrevation as in pdbfile
+		Y = one letter code in the alignment
+		CA = atom to use as CA if different from "CA", eg 
+		C1 in PVL of 1JEN	
 
 	'''
 	selections = selection.split(",")
@@ -44,34 +55,58 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",outfile="tmp.pd
 
 	modified_selections = []
 	for polymer in selections:
-		currentSelection = structure.select("protein and name CA and %s"%polymer)
-		if currentSelection:
-			pdbseq_str=''.join([oneletter[i] for i in currentSelection.getResnames()])
+		currentSel = structure.select("protein and name CA and %s"%polymer)
+		if currentSel:
+			pdbseq_str=''.join([oneletter[i] for i in currentSel.getResnames()])
 			pdbseqRec=SeqRecord(Seq(pdbseq_str,IUPAC.protein),id=pdbfile)
 			SeqIO.write(pdbseqRec,tmp_pdbseqfile,"fasta")
 
-			needle_cli = NeedleCommandline(asequence=tmp_pdbseqfile,bsequence=tmp_refseqfile,gapopen=10,gapextend=0.5,outfile=tmp_needle)
+			needle_cli = NeedleCommandline(asequence=tmp_pdbseqfile,bsequence=tmp_refseqfile,\
+				gapopen=10,gapextend=0.5,outfile=tmp_needle)
 			needle_cli()
 			aln = AlignIO.read(tmp_needle, "emboss",alphabet=IUPAC.protein )
-			# os.remove(tmp_needle)
+			os.remove(tmp_needle)
 			os.remove(tmp_pdbseqfile)		
 
 			gpdb.renumber_aln(aln,"refseq",pdbfile)
 			pdbRenSeq = gpdb.seqbyname(aln, pdbfile)		
 			gpdb.renumber_struct(structure, pdbRenSeq,polymer)
-			# pdbRenSeq = gpdb.seqbyname(aln, pdbfile)
-			# seems to be the only way to store per residue annotations
 			pdbRenSeq.annotations["resnum"]=str(pdbRenSeq.letter_annotations["resnum"])
-			# AlignIO.write(aln,"pdb.outseq","seqxml")		
 			modified_selections.append(polymer)
+			# seems to be the only way to store per residue annotations
+			# AlignIO.write(aln,"pdb.outseq","seqxml")		
 		else:
 			print 'ERROR: Selection \"%s\" has zero CA atoms'%polymer
 
 	if writePDB(outfile, structure):
-		print "Wrote renumbered %s selections from %s to %s"%(str(modified_selections),pdbfile,outfile)
+		print "Wrote renumbered %s selections from %s to %s"%\
+		(str(modified_selections),pdbfile,outfile)
 	os.remove(tmp_refseqfile)
 
-def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbered.pdb",pdbfile="",newAA=None):
+def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
+	,outfile="renumbered.pdb",pdbfile="",newAA=None):
+	'''
+	Renumber input pdb using an exsiting multiple alignment. 
+	- alnfile: alignment in .fasta format. Beware of weird 	characters in the 
+	sequence ids, eg "|"
+	- pdbid: sequence id in the alginment file that corresponds	to the input 
+	structure. Must be the same number of residues
+	- refid: sequence id corresponding to the reference sequence by which to 
+	renumber the pdbid sequence. pdbid musnt' align to any gaps in refid.
+	- selection: atom selection(s) in the the structure file to renumber. 
+	Will iterate over comma separated selections to renumber each.
+	- pdbfile: original structure file
+	- outfile: output structure file
+	- newAA: comma separated list of unrepresented amino acids
+		XXXYCA: 
+		XXX = three letter abbrevation as in pdbfile
+		Y = one letter code in the alignment
+		CA = atom to use as CA if different from "CA", eg 
+		C1 in PVL of 1JEN	 
+
+	'''
+
+
 	selections = selection.split(",")
 	tmp=tempfile.gettempdir()
 
@@ -86,7 +121,14 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbe
 	aln_ids = [x.id for x in aln]
 	if pdbid in aln_ids and refid in aln_ids:		
 		pdbSeqRec = seqbyname(aln, pdbid)
+		if not pdbSeqRec:
+			print "ERROR, bad pdbid name"
+			exit(1)
+
 		refSeqRec = seqbyname(aln, refid)
+		if not refSeqRec:
+			print "ERROR, bad refid name"
+			exit(1)
 
 		if pdbfile != '':
 			if os.path.exists(pdbfile):
@@ -96,16 +138,14 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbe
 				print "ERROR, no such pdb file: %s"%pdbfile
 				exit(1)
 
-		if pdbSeqRec and refSeqRec and structure:
-			renumber_aln(aln, refid, pdbid)
-			for polymer in selections:
-				currentSelection = structure.select("not hetero and protein and name CA and %s"%polymer)
-				if currentSelection:
-					# renumber_struct(structure, pdbSeqRec)
-					renumber_struct(structure, pdbSeqRec, polymer)
-					modified_selections.append(polymer)
-				else:
-					print 'ERROR: Selection \"%s\" has zero CA atoms'%polymer										
+		renumber_aln(aln, refid, pdbid)
+		for polymer in selections:
+			currentSel = structure.select("not hetero and protein and name CA and %s"%polymer)
+			if currentSel:
+				renumber_struct(structure, pdbSeqRec, polymer)
+				modified_selections.append(polymer)
+			else:
+				print 'ERROR: Selection \"%s\" has zero CA atoms'%polymer										
 	else:
 		if pdbid not in [x.id for x in aln]:
 			print "ERROR, no such sequence to renumber: %s"%pdbid		
@@ -114,7 +154,8 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein",outfile="renumbe
 		exit(1)
 
 	if writePDB(outfile, structure):
-		print "Wrote renumbered %s selections from %s to %s"%(str(modified_selections),pdbfile,outfile)
+		print "Wrote renumbered %s selections from %s to %s"\
+		%(str(modified_selections),pdbfile,outfile)
 
 def updateAA(struct,newAAstr):
 	if newAAstr:
@@ -129,24 +170,26 @@ def updateAA(struct,newAAstr):
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-s","--structure",type=str,help="PDB file to be renumbered. Defaults to <pdbseq>.pdb when used with \'-a\'")
-	parser.add_argument("-a","--alignment",type=str,help="Multiple alignment to use for renumbering (fasta format)")	
-	parser.add_argument("-r","--refseq",type=str,help="Reference sequence id (for multiple alginment) or .fasta file of reference sequence"\
-		" according to which to renumber. Required.",required=True)
-	parser.add_argument("-p","--pdbseq",type=str,help="Sequence id to renumber if using an existing multiple alignment.")
-	parser.add_argument("-v","--selections",type=str,help="Comma separated list of vmd atomselections in "\
-		"double quotes. Each selection will be renumbered according to the alignment",default="protein")
-	parser.add_argument("-o","--outfile",type=str,help="Output .pdb filename",default="renumbered.pdb")
-	parser.add_argument("-n","--newres",type=str,help="Add a new residue to the table of non-standard amino acids: XXXYZ[Z]."\
-		" XXX = three-letter abbreviation, Y = one-letter abbreviation, Z[Z] = atom to relabel as CA (if needed)",default=None)
-
-	# combinations: -a -s -p -r / -s -r -v
+	parser.add_argument("-s","--structure",type=str,help="PDB file to be renumbered. \
+		Defaults to <pdbseq>.pdb when used with \'-a\'")
+	parser.add_argument("-a","--alignment",type=str,help="Multiple alignment to use for \
+		renumbering (fasta format)")	
+	parser.add_argument("-r","--refseq",type=str,help="Reference sequence id (for multiple \
+		alginment) or .fasta file of reference sequence by which to renumber. Required.",\
+		required=True)
+	parser.add_argument("-p","--pdbseq",type=str,help="Sequence id to renumber if using an \
+		existing multiple alignment.")
+	parser.add_argument("-v","--selections",type=str,help="Comma separated list of vmd \
+		atomselections in double quotes. Each selection will be renumbered according to the \
+		alignment",default="protein")
+	parser.add_argument("-o","--outfile",type=str,help="Output .pdb filename",\
+		default="renumbered.pdb")
+	parser.add_argument("-n","--newres",type=str,help="Add a new residue to the table of \
+		non-standard amino acids: XXXYZ[Z]. XXX = three-letter abbreviation, Y = one-letter \
+		abbreviation, Z[Z] = atom to relabel as CA (if needed)",default=None)
 
 	args = parser.parse_args()
 	kwargs = {}
-
-	# if args.outfile:
-	# 		kwargs['outfile'] = args.outfile
 
 	if args.pdbseq and not args.outfile:
 		kwargs['outfile'] = "%s.renumbered.pdb"%args.pdbseq
@@ -154,9 +197,7 @@ def main():
 		kwargs['outfile'] = args.outfile
 
 	kwargs['newAA'] = args.newres
-	# if not args.selections:
-	# 	args.selections = "protein"
-
+	kwargs['selection'] = args.selections
 	if args.alignment:		
 		if not args.pdbseq or not args.refseq:
 			if not args.pdbseq:
@@ -170,14 +211,13 @@ def main():
 			kwargs['pdbfile'] = args.structure			
 		else:
 			kwargs['pdbfile'] = "%s.pdb"%args.pdbseq			
-		kwargs['selection'] = args.selections
+	
 		renumber_InputAlign(args.alignment, args.pdbseq, args.refseq,**kwargs)
 	elif args.structure and args.refseq:		
-		kwargs['selection'] = args.selections
 		renumber_noInputAlign(args.structure, args.refseq, **kwargs)
 	else:
 		print "ERROR, must specify a structure or alignment file"
 		exit(1)
-	# doesn't yet cater for reading 
+
 if __name__ == '__main__':
 	main()

@@ -33,9 +33,9 @@ proc heterofit {{mol1 0} {mol2 1} {sel1 "protein"} {sel2 "protein"} {frame now}}
 ''')
 	vmdscript.write('proc fit_%s_to_%s {{mol1} {mol2} {sel1 \"protein\"} {sel2 \"protein\"}} {\n'%(pdbid1,pdbid2))
 	vmdscript.write("# Fit %s to %s \n"%(pdbid1,pdbid2))
-	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid1)
+	vmdscript.write("\tputs \"Number of atoms to fit in %s:\"\n"%pdbid1)
 	vmdscript.write('\tputs [[atomselect $mol1 \"resid %s and name CA and $sel1\" ] num]\n'%vmdslice(slice1))
-	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid2)
+	vmdscript.write("\tputs \"Number of atoms to fit in %s:\"\n"%pdbid2)
 	vmdscript.write('\tputs [[atomselect $mol2 "resid %s and name CA and $sel2" ] num]\n'%vmdslice(slice2))
 	vmdscript.write('\theterofit $mol1 $mol2 "resid %s and $sel1" "resid %s and $sel2"\n'%(vmdslice(slice1),vmdslice(slice2)))
 	vmdscript.write("}\n\n")
@@ -43,9 +43,9 @@ proc heterofit {{mol1 0} {mol2 1} {sel1 "protein"} {sel2 "protein"} {frame now}}
 	# vmdscript.write("proc fit_%s_to_%s {mol1 mol2} {\n"%(pdbid2,pdbid1))
 	vmdscript.write('proc fit_%s_to_%s {{mol1} {mol2} {sel1 \"protein\"} {sel2 \"protein\"}} {\n'%(pdbid2,pdbid1))
 	vmdscript.write("# Fit %s to %s \n"%(pdbid2,pdbid1))
-	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid2)
+	vmdscript.write("\tputs \"Number of atoms to fit in %s:\"\n"%pdbid2)
 	vmdscript.write("\tputs [[atomselect $mol1 \"resid %s and name CA and $sel1\" ] num]\n"%vmdslice(slice2))
-	vmdscript.write("\tputs \"Number of atoms to align in %s:\"\n"%pdbid1)
+	vmdscript.write("\tputs \"Number of atoms to fit in %s:\"\n"%pdbid1)
 	vmdscript.write('\tputs [[atomselect $mol2 "resid %s and name CA and $sel2" ] num]\n'%vmdslice(slice1))
 	vmdscript.write('\theterofit $mol1 $mol2 "resid %s and $sel1" "resid %s and $sel2"\n'%(vmdslice(slice2),vmdslice(slice1)))
 	vmdscript.write("}\n\n")
@@ -57,10 +57,19 @@ proc heterofit {{mol1 0} {mol2 1} {sel1 "protein"} {sel2 "protein"} {frame now}}
 def write_pymol_script(filename,pdbid1,pdbid2,slice1,slice2):
 
 	pymolscript = open(filename,"w")
-
 	pymolscript.write("import pymol\n")
 
-	# pymolscript.write("def fit_%s_to%s(mol1,mol2):\n"%(pdbid1,pdbid2))
+	pymolscript.write('''
+def fit_%s_to_%s(mol1,mol2):
+	cmd.do("select tmp1, name CA and (%s) and (i. %s)"%s)
+	cmd.do("select tmp2, name CA and (%s) and (i. %s)"%s)
+	cmd.do("fit tmp1, tmp2, matchmaker=-1")
+	cmd.delete("tmp1")
+	cmd.delete("tmp2")
+
+cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
+'''%(pdbid1,pdbid2,"%s",pymol_slice(slice1),"%mol1","%s",pymol_slice(slice2),"%mol2",\
+	pdbid1,pdbid2,pdbid1,pdbid2))
 
 	pymolscript.write('''
 def fit_%s_to_%s(mol1,mol2):
@@ -71,18 +80,8 @@ def fit_%s_to_%s(mol1,mol2):
 	cmd.delete("tmp2")
 
 cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
-'''%(pdbid1,pdbid2,"%s",pymol_slice(slice1),"%mol1","%s",pymol_slice(slice2),"%mol2",pdbid1,pdbid2,pdbid1,pdbid2))
-
-	pymolscript.write('''
-def fit_%s_to_%s(mol1,mol2):
-	cmd.do("select tmp1, name CA and (%s) and (i. %s)"%s)
-	cmd.do("select tmp2, name CA and (%s) and (i. %s)"%s)
-	cmd.do("fit tmp1, tmp2, matchmaker=-1")
-	cmd.delete("tmp1")
-	cmd.delete("tmp2")
-
-cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
-'''%(pdbid2,pdbid1,"%s",pymol_slice(slice2),"%mol1","%s",pymol_slice(slice1),"%mol2",pdbid2,pdbid1,pdbid2,pdbid1))
+'''%(pdbid2,pdbid1,"%s",pymol_slice(slice2),"%mol1","%s",pymol_slice(slice1),"%mol2",\
+	pdbid2,pdbid1,pdbid2,pdbid1))
 	
 	
 	pymolscript.close()
