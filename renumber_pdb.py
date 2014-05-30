@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/bin/env python2
 # -*- coding: utf-8 -*-
 
 from Bio import AlignIO,SeqIO,ExPASy,SwissProt,Seq,SeqRecord
@@ -8,13 +8,14 @@ from prody.proteins import parsePDB, writePDB
 import argparse
 import os
 import sys
+import re
 import tempfile
 from gpdb import *
 import gpdb
 
 
 def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
-	outfile="renumbered.pdb",newAA=None):
+	outfile="renumbered.pdb",newAA=None,first=1):
 	'''
 	Renumber pdb file (pdbfile) according to reference sequence in refseqfile. 
 	Pdb sequence is extracted and aligned with reference sequence using needle 
@@ -36,7 +37,8 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 	selections = selection.split(",")
 	tmp=tempfile.gettempdir()
 	tmp_refseqfile="%s/refseq.fasta"%tmp
-	tmp_pdbseqfile="%s/%s.fasta"%(tmp,pdbfile)
+	pdbID = re.search("\w+\.\w+", pdbfile).group(0)
+	tmp_pdbseqfile="%s/%s.fasta"%(tmp,pdbID)
 	tmp_needle="%s/needle.out"%tmp
 	if os.path.exists(refseqfile):
 		refseqRec = SeqIO.parse(refseqfile,"fasta",alphabet=IUPAC.protein ).next()	
@@ -58,18 +60,18 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 		currentSel = structure.select("protein and name CA and %s"%polymer)
 		if currentSel:
 			pdbseq_str=''.join([oneletter[i] for i in currentSel.getResnames()])
-			pdbseqRec=SeqRecord(Seq(pdbseq_str,IUPAC.protein),id=pdbfile)
+			pdbseqRec=SeqRecord(Seq(pdbseq_str,IUPAC.protein),id=pdbID)
 			SeqIO.write(pdbseqRec,tmp_pdbseqfile,"fasta")
 
 			needle_cli = NeedleCommandline(asequence=tmp_pdbseqfile,bsequence=tmp_refseqfile,\
 				gapopen=10,gapextend=0.5,outfile=tmp_needle)
 			needle_cli()
 			aln = AlignIO.read(tmp_needle, "emboss",alphabet=IUPAC.protein )
-			os.remove(tmp_needle)
-			os.remove(tmp_pdbseqfile)		
+			# os.remove(tmp_needle)
+			# os.remove(tmp_pdbseqfile)		
 
-			gpdb.renumber_aln(aln,"refseq",pdbfile)
-			pdbRenSeq = gpdb.seqbyname(aln, pdbfile)		
+			gpdb.renumber_aln(aln,"refseq",pdbID,first)
+			pdbRenSeq = gpdb.seqbyname(aln, pdbID)		
 			gpdb.renumber_struct(structure, pdbRenSeq,polymer)
 			pdbRenSeq.annotations["resnum"]=str(pdbRenSeq.letter_annotations["resnum"])
 			modified_selections.append(polymer)
@@ -80,11 +82,11 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 
 	if writePDB(outfile, structure):
 		print "Wrote renumbered %s selections from %s to %s"%\
-		(str(modified_selections),pdbfile,outfile)
+		(str(modified_selections),pdbID,outfile)
 	os.remove(tmp_refseqfile)
 
 def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
-	,outfile="renumbered.pdb",pdbfile="",newAA=None):
+	,outfile="renumbered.pdb",pdbfile="",newAA=None,first=1):
 	'''
 	Renumber input pdb using an exsiting multiple alignment. 
 	- alnfile: alignment in .fasta format. Beware of weird 	characters in the 
@@ -138,7 +140,7 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
 				print "ERROR, no such pdb file: %s"%pdbfile
 				exit(1)
 
-		renumber_aln(aln, refid, pdbid)
+		renumber_aln(aln, refid, pdbid,first)
 		for polymer in selections:
 			currentSel = structure.select("not hetero and protein and name CA and %s"%polymer)
 			if currentSel:
@@ -178,15 +180,15 @@ def main():
 		alginment) or .fasta file of reference sequence by which to renumber. Required.",\
 		required=True)
 	parser.add_argument("-p","--pdbseq",type=str,help="Sequence id to renumber if using an \
-		existing multiple alignment.")
+		existing multiple alignment")
 	parser.add_argument("-v","--selections",type=str,help="Comma separated list of vmd \
 		atomselections in double quotes. Each selection will be renumbered according to the \
 		alignment",default="protein")
-	parser.add_argument("-o","--outfile",type=str,help="Output .pdb filename",\
-		default="renumbered.pdb")
+	parser.add_argument("-o","--outfile",type=str,help="Output .pdb filename. Defaults to -s or -p input +\".renumbered.pdb\"")
 	parser.add_argument("-n","--newres",type=str,help="Add a new residue to the table of \
 		non-standard amino acids: XXXYZ[Z]. XXX = three-letter abbreviation, Y = one-letter \
 		abbreviation, Z[Z] = atom to relabel as CA (if needed)",default=None)
+	parser.add_argument("-f","--first",type=int,help="Index of first residue", default=1)
 
 	args = parser.parse_args()
 	kwargs = {}
@@ -195,9 +197,17 @@ def main():
 		kwargs['outfile'] = "%s.renumbered.pdb"%args.pdbseq
 	elif args.outfile:
 		kwargs['outfile'] = args.outfile
+	elif not args.outfile:
+		# inputStruct = args.structure
+		if not args.pdbseq:
+			pdbID = re.search("\w+\.\w+", args.structure).group(0)		
+			kwargs['outfile'] = re.sub('.pdb','',pdbID)+".renumbered.pdb"
+		else:
+			kwargs['outfile'] = re.sub('.pdb','',args.pdbseq)+".renumbered.pdb"
 
 	kwargs['newAA'] = args.newres
 	kwargs['selection'] = args.selections
+	kwargs['first'] = args.first
 	if args.alignment:		
 		if not args.pdbseq or not args.refseq:
 			if not args.pdbseq:

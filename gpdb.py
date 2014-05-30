@@ -70,7 +70,7 @@ def seqbyname(aln,seqid):
 	return seqRec
 
 
-def renumber_aln(aln,refseq_id,pdbseq_id):
+def renumber_aln(aln,refseq_id,pdbseq_id,first=1):
 	'''
 	Renumber pdbseq_id in aln according to "resnum" values of refseq_id. 
 	Also recorded in "resnum" letter annotation
@@ -81,7 +81,7 @@ def renumber_aln(aln,refseq_id,pdbseq_id):
 	refseqRec = [s for s in aln if s.id == refseq_id][0]
 	refseqRec.letter_annotations["resnum"]=[None]*len(refseqRec)
 	refseqNogap = [i for i in range(len(refseqRec)) if refseqRec[i] != '-']
-	resnum = 1
+	resnum = first
 	for resindex in refseqNogap:
 		refseqRec.letter_annotations["resnum"][resindex]=resnum
 		resnum+=1

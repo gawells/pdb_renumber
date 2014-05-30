@@ -1,4 +1,4 @@
-#!env python
+#!env python2
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -9,6 +9,7 @@ from Bio.Alphabet import IUPAC
 from prody.proteins.pdbfile import parsePDB, writePDB
 import os
 import sys
+import re
 import tempfile
 from gpdb import *
 import gpdb
@@ -86,19 +87,21 @@ cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
 	
 	pymolscript.close()
 
-def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",filter1=None,filter2=None):
+def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",filter1=None,filter2=None,first1=1,first2=1):
 	tmp=tempfile.gettempdir()
 
 	if os.path.exists(alnfile):
 		aln = AlignIO.read(alnfile, "fasta",alphabet=IUPAC.protein)
+		# aln = AlignIO.read(alnfile, "clustal",alphabet=IUPAC.protein)
 	else:
 		print "ERROR, no such alignment: %s"%alnfile
 		exit(1)
 
 	aln_ids = [x.id for x in aln]
+
 	if pdbid1 in aln_ids and refid1 in aln_ids and pdbid2 in aln_ids and refid2 in aln_ids:		
-		renumber_aln(aln, refid1, pdbid1)
-		renumber_aln(aln, refid2, pdbid2)
+		renumber_aln(aln, refid1, pdbid1,first=first1)
+		renumber_aln(aln, refid2, pdbid2,first=first2)
 		common = overlap(aln, pdbid1, pdbid2)
 
 		pdbSeqRec1 = seqbyname(aln, pdbid1)
@@ -144,15 +147,19 @@ def main():
 	parser.add_argument("-r2","--refseq2",type=str,help="Reference sequence id for second sequence.")
 	parser.add_argument("-v","--writevmd",type=str,help="Output a vmd .tcl script for fitting")
 	parser.add_argument("-py","--writepymol",type=str,help="Output a pymol script for fitting")
-	parser.add_argument("-f1","--filter1",type=str,help="Filter first sequence")
-	parser.add_argument("-f2","--filter2",type=str,help="Filter first sequence")
+	parser.add_argument("-s1","--filter1",type=str,help="VMD Filter for first sequence")
+	parser.add_argument("-s2","--filter2",type=str,help="VMD Filter for second sequence")
+	parser.add_argument("-f1","--first1",type=int,help="First residue index for refseq1",default=1)
+	parser.add_argument("-f2","--first2",type=int,help="First residue index for refseq2",default=1)
 
 	args = parser.parse_args()
 	kwargs = {
 		'writevmd':args.writevmd,
 		'writepymol':args.writepymol,
 		"filter1":args.filter1,
-		"filter2":args.filter2
+		"filter2":args.filter2,
+		"first1":args.first1,
+		"first2":args.first2
 	}
 
 	overlapping(args.alignment, args.pdbseq1, args.pdbseq2, args.refseq1, args.refseq2,**kwargs)
