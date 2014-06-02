@@ -154,9 +154,12 @@ def vmdslice(l):
 
 	if end - begin >= 2:
 		s = s + "%d to %d "%(begin,end)
+	elif end - begin == 1:
+		pass
+		s = s + " %d %d"%(begin, end)				
 	else:
 		s = s + " %d"%(begin)		
-	
+	# print l
 	return s
 
 def pymol_slice(l):

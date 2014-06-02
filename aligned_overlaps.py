@@ -14,6 +14,11 @@ import tempfile
 from gpdb import *
 import gpdb
 
+def print_overlaps(pdbid1,pdbid2,slice1,slice2):
+	print "%s: %s"%(pdbid1,vmdslice(slice1))
+	print "%s: %s"%(pdbid2,vmdslice(slice2))
+	pass
+
 def writevmd_script(filename,pdbid1,pdbid2,slice1,slice2):
 	vmdscript = open(filename,"w")
 
@@ -134,6 +139,7 @@ def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",fi
 		if writepymol != "" and writepymol != None:
 			write_pymol_script(writepymol,pdbid1,pdbid2,slice1,slice2)
 		
+		print_overlaps(pdbid1,pdbid2,slice1,slice2)		
 		
 	else:
 		print "we did not arrive"
