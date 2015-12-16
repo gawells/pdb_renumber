@@ -73,7 +73,7 @@ def fit_%s_to_%s(mol1,mol2):
 	cmd.delete("tmp1")
 	cmd.delete("tmp2")
 
-cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
+cmd.extend "fit_%s_to_%s",fit_%s_to_%s
 '''%(pdbid1,pdbid2,"%s",pymol_slice(slice1),"%mol1","%s",pymol_slice(slice2),"%mol2",\
 	pdbid1,pdbid2,pdbid1,pdbid2))
 
@@ -85,7 +85,7 @@ def fit_%s_to_%s(mol1,mol2):
 	cmd.delete("tmp1")
 	cmd.delete("tmp2")
 
-cmd.extend("fit_%s_to_%s",fit_%s_to_%s)
+cmd.extend" fit_%s_to_%s",fit_%s_to_%s
 '''%(pdbid2,pdbid1,"%s",pymol_slice(slice2),"%mol1","%s",pymol_slice(slice1),"%mol2",\
 	pdbid2,pdbid1,pdbid2,pdbid1))
 	
@@ -103,6 +103,11 @@ def overlapping(alnfile,pdbid1,pdbid2,refid1,refid2,writevmd="",writepymol="",fi
 		exit(1)
 
 	aln_ids = [x.id for x in aln]
+
+	for sequence in [pdbid1,pdbid2,refid1,refid2] :
+		if not sequence in aln_ids:
+			print "No such entry in alignment: %s"%sequence
+			return
 
 	if pdbid1 in aln_ids and refid1 in aln_ids and pdbid2 in aln_ids and refid2 in aln_ids:		
 		renumber_aln(aln, refid1, pdbid1,first=first1)

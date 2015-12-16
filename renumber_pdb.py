@@ -1,4 +1,4 @@
-#!/bin/env python2
+#!/bin/env python3
 # -*- coding: utf-8 -*-
 
 from Bio import AlignIO,SeqIO,ExPASy,SwissProt,Seq,SeqRecord
@@ -12,7 +12,6 @@ import re
 import tempfile
 from gpdb import *
 import gpdb
-
 
 def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 	outfile="renumbered.pdb",newAA=None,first=1):
@@ -41,18 +40,18 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 	tmp_pdbseqfile="%s/%s.fasta"%(tmp,pdbID)
 	tmp_needle="%s/needle.out"%tmp
 	if os.path.exists(refseqfile):
-		refseqRec = SeqIO.parse(refseqfile,"fasta",alphabet=IUPAC.protein ).next()	
+		refseqRec = SeqIO.read(refseqfile,"fasta",alphabet=IUPAC.protein )
 		refseqRec.id = "refseq"
 		SeqIO.write(refseqRec,tmp_refseqfile,"fasta")
 	else: 
-		print "ERROR, no such file: %s"%refseqfile
+		print ("ERROR, no such file: %s"%refseqfile)
 		exit(1)
 
 	if os.path.exists(pdbfile):
 		structure=parsePDB("%s"%pdbfile)
 		updateAA(structure,newAA)
 	else:
-		print "ERROR, no such file: %s"%pdbfile
+		print ("ERROR, no such file: %s"%pdbfile)
 		exit(1)
 
 	modified_selections = []
@@ -78,11 +77,11 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 			# seems to be the only way to store per residue annotations
 			# AlignIO.write(aln,"pdb.outseq","seqxml")		
 		else:
-			print 'ERROR: Selection \"%s\" has zero CA atoms'%polymer
+			print ('ERROR: Selection \"%s\" has zero CA atoms'%polymer)
 
 	if writePDB(outfile, structure):
-		print "Wrote renumbered %s selections from %s to %s"%\
-		(str(modified_selections),pdbID,outfile)
+		print ("Wrote renumbered %s selections from %s to %s"%\
+				(str(modified_selections),pdbID,outfile))
 	os.remove(tmp_refseqfile)
 
 def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
@@ -117,19 +116,19 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
 	if os.path.exists(alnfile):
 		aln = AlignIO.read(alnfile, "fasta",alphabet=IUPAC.protein)
 	else:
-		print "ERROR, no such alignment: %s"%alnfile
+		print("ERROR, no such alignment: %s"%alnfile)
 		exit(1)
 
 	aln_ids = [x.id for x in aln]
 	if pdbid in aln_ids and refid in aln_ids:		
 		pdbSeqRec = seqbyname(aln, pdbid)
 		if not pdbSeqRec:
-			print "ERROR, bad pdbid name"
+			print("ERROR, bad pdbid name")
 			exit(1)
 
 		refSeqRec = seqbyname(aln, refid)
 		if not refSeqRec:
-			print "ERROR, bad refid name"
+			print("ERROR, bad refid name")
 			exit(1)
 
 		if pdbfile != '':
@@ -137,7 +136,7 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
 				structure = parsePDB(pdbfile)
 				updateAA(structure,newAA)
 			else:
-				print "ERROR, no such pdb file: %s"%pdbfile
+				print("ERROR, no such pdb file: %s"%pdbfile)
 				exit(1)
 
 		renumber_aln(aln, refid, pdbid,first)
@@ -147,17 +146,17 @@ def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
 				renumber_struct(structure, pdbSeqRec, polymer)
 				modified_selections.append(polymer)
 			else:
-				print 'ERROR: Selection \"%s\" has zero CA atoms'%polymer										
+				print('ERROR: Selection \"%s\" has zero CA atoms'%polymer)
 	else:
 		if pdbid not in [x.id for x in aln]:
-			print "ERROR, no such sequence to renumber: %s"%pdbid		
+			print("ERROR, no such sequence to renumber: %s"%pdbid)
 		if refid not in [x.id for x in aln]:
-			print "ERROR, no such sequence to renumber by: %s"%refid
+			print("ERROR, no such sequence to renumber by: %s"%refid)
 		exit(1)
 
 	if writePDB(outfile, structure):
-		print "Wrote renumbered %s selections from %s to %s"\
-		%(str(modified_selections),pdbfile,outfile)
+		print("Wrote renumbered %s selections from %s to %s"\
+				%(str(modified_selections),pdbfile,outfile))
 
 def updateAA(struct,newAAstr):
 	if newAAstr:
@@ -211,10 +210,10 @@ def main():
 	if args.alignment:		
 		if not args.pdbseq or not args.refseq:
 			if not args.pdbseq:
-				print "No pdb sequence ID specified"
+				print("No pdb sequence ID specified")
 			if not args.refseq:
-				print "No reference sequence ID specified"
-			print "ERROR, must specify a reference and structure sequence ID"
+				print("No reference sequence ID specified")
+			print("ERROR, must specify a reference and structure sequence ID")
 			exit(1)
 		
 		if args.structure:
@@ -226,7 +225,7 @@ def main():
 	elif args.structure and args.refseq:		
 		renumber_noInputAlign(args.structure, args.refseq, **kwargs)
 	else:
-		print "ERROR, must specify a structure or alignment file"
+		print("ERROR, must specify a structure or alignment file")
 		exit(1)
 
 if __name__ == '__main__':

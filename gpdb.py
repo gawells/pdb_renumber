@@ -49,7 +49,7 @@ def updateAATable(struct,threeletterAbbrv,oneletterAbbrv,CA='CA'):
 
 	'''
 
-	print "Adding non-standard amino acid %s:%s, %s set to CA"%(threeletterAbbrv,oneletterAbbrv,CA)
+	print( "Adding non-standard amino acid %s:%s, %s set to CA"%(threeletterAbbrv,oneletterAbbrv,CA))
 	struct.select("resname %s and name %s"%(threeletterAbbrv,CA)).setNames("CA")
 	addNonstdAminoacid(threeletterAbbrv)
 	oneletter.update({threeletterAbbrv:oneletterAbbrv})
@@ -57,14 +57,14 @@ def updateAATable(struct,threeletterAbbrv,oneletterAbbrv,CA='CA'):
 
 def seqnum(aln,seqid):
 	'''
-	Return index of sequence with corresponding sequnce id
+	Return index of sequence with corresponding sequence id
 	'''
 	l = [i for i in range(len(aln)) if aln[i].id == seqid]
 	return l[0]
 
 def seqbyname(aln,seqid):
 	'''
-	Return sequence with corresponding sequnce id
+	Return sequence with corresponding sequence id
 	'''
 	seqRec = [s for s in aln if s.id == seqid][0]
 	return seqRec
@@ -95,6 +95,7 @@ def renumber_aln(aln,refseq_id,pdbseq_id,first=1):
 def overlap(aln,seqid1,seqid2):
 	'''
 	Return list of indices corresponding to aligned residues with assgined residue numbers	
+	
 	'''
 	seq1 = seqbyname(aln,seqid1)
 	seq2 = seqbyname(aln,seqid2)
@@ -235,8 +236,8 @@ def sequential_renumber(struct,resindex,resindex_str,selection,number_from):
 	
 	for resn in resindex:
 		last_biggest += 1
- 		natoms = struct.select("resindex %d and (%s)"%(resn,selection)).numAtoms()
-	 	newclashNums += [last_biggest]*natoms
+		natoms = struct.select("resindex %d and (%s)"%(resn,selection)).numAtoms()
+		newclashNums += [last_biggest]*natoms
 	# print "DEBUG %s"%newclashNums
 
 	struct.select("resindex %s"%resindex_str).setResnums(newclashNums)	
@@ -275,7 +276,7 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 		hetero = struct.select(hetero_selstr)
 		if hetero:
 			ligands = ', '.join(i for i in uniq(hetero.getResnames()))
-			print "Found the following ligands in chain %s: %s"%(chain,ligands)
+			print ("Found the following ligands in chain %s: %s"%(chain,ligands))
 			# print uniq(hetero.getChids())
 			# print "DEBUG"%uniq(hetero.getResnums())
 			hetero_resids = uniq(hetero.getResindices())
@@ -292,25 +293,25 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 			solvent_intersection = [x for x in newresnums if x in solvent_resnums]
 
 		if len (hetero_intersection) > 0:
-			print "WARNING, ligand resnums clash with new resnums"
-			print "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr)
+			print( "WARNING, ligand resnums clash with new resnums")
+			print( "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr))
 			# print "DEBUG %s"%hetero_resids
 			# print "DEBUG %s"%hetero_resnums
 			last_biggest = sequential_renumber(struct,hetero_resids,hetero_resids_str,hetero_selstr,last_biggest)
 
 		if len(solvent_intersection) > 0:
 			hetero_newsolvent_intersection = []
-			print "WARNING, solvent resnums clash with new resnums"
+			print( "WARNING, solvent resnums clash with new resnums")
 
 			# check for clash between previously ignored ligands and new solvent numbering
 			if hetero_intersection > 0 and hetero:
 				hetero_newsolvent_intersection = [x for x in hetero_resnums if x in range(last_biggest,last_biggest+len(solvent_resids))]
 			if len(hetero_newsolvent_intersection) > 0:
-				print "WARNING, solvent renumbering clashes with ligands"
-				print "Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr)
+				print ("WARNING, solvent renumbering clashes with ligands")
+				print ("Renumbering ligands from %d for %s"%(last_biggest+1,renumbered_selstr))
 				last_biggest = sequential_renumber(struct,hetero_resids,hetero_resids_str,hetero_selstr,last_biggest)
 			
-			print "Renumbering solvent from %d"%(last_biggest+1)
+			print ("Renumbering solvent from %d"%(last_biggest+1))
 			sequential_renumber(struct,solvent_resids,solvent_resids_str,solvent_selstr,last_biggest)	
 
 def renumber_struct(struct,seq,selection="chain A"):
@@ -345,8 +346,12 @@ def renumber_struct(struct,seq,selection="chain A"):
 			newresnums_long += [newresnum]*struct.select("resindex %d"%resindex).numAtoms() 
 		struct.select("resindex %s"%resindex_str).setResnums(newresnums_long) #about 20× faster
 	else:
-		print "ERROR, unequal number of renumbered residues (%d) and to-be-renumbered residues (%d)"%(num_newresnums,num_resindices)
-		print "Make certain the correct reference sequence was chosen and that none of the structure sequence is aligned to gaps."
+		print( 'ERROR, unequal number of renumbered residues (%d) and \n'\
+			'to-be-renumbered residues (%d)\n'%(num_newresnums,num_resindices))
+		print( 'Make certain the correct reference sequence was chosen\n'+\
+		 		'and that none of the structure sequence is aligned to \n'+\
+		 		'gaps. Possible cause: affinity tags etc')
+
 		exit(1)
 
 def write_renumbered(aln,pdbid,pchain):
@@ -371,10 +376,10 @@ def showoverlap(seqid1,seqid2,aln):
 	slice2 = seq2_overlap
 	slice2str= ' '.join(str(i) for i in slice2)
 
-	print "%s : %s"%(seqid1,seqid2)
+	print( "%s : %s"%(seqid1,seqid2))
 
 	for i in range(len(seq1_overlap)):
-		print "%s %s : %s %s "%(seq1_overlap[i],seq1_overlap_resname[i],seq2_overlap[i],seq2_overlap_resname[i])
+		print ("%s %s : %s %s "%(seq1_overlap[i],seq1_overlap_resname[i],seq2_overlap[i],seq2_overlap_resname[i]))
 	
 
 
