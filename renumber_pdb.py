@@ -13,6 +13,7 @@ import tempfile
 from gpdb import *
 import gpdb
 
+
 def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 	outfile="renumbered.pdb",newAA=None,first=1):
 	'''
@@ -33,7 +34,8 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 		C1 in PVL of 1JEN	
 
 	'''
-	selections = selection.split(",")
+	# selections = selection.split(",")
+	selections = selection
 	tmp=tempfile.gettempdir()
 	tmp_refseqfile="%s/refseq.fasta"%tmp
 	pdbID = re.search("\w+\.\w+", pdbfile).group(0)
@@ -81,7 +83,7 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 
 	if writePDB(outfile, structure):
 		print ("Wrote renumbered %s selections from %s to %s"%\
-				(str(modified_selections),pdbID,outfile))
+				(str(modified_selections),pdbfile,outfile))
 	os.remove(tmp_refseqfile)
 
 def renumber_InputAlign(alnfile,pdbid,refid,selection="protein"\
@@ -181,8 +183,8 @@ def main():
 	parser.add_argument("-p","--pdbseq",type=str,help="Sequence id to renumber if using an \
 		existing multiple alignment")
 	parser.add_argument("-v","--selections",type=str,help="Comma separated list of vmd \
-		atomselections in double quotes. Each selection will be renumbered according to the \
-		alignment",default="protein")
+		atom selections in double quotes. Each selection will be renumbered according to the \
+		alignment",default="protein",nargs='*')
 	parser.add_argument("-o","--outfile",type=str,help="Output .pdb filename. Defaults to -s or -p input +\".renumbered.pdb\"")
 	parser.add_argument("-n","--newres",type=str,help="Add a new residue to the table of \
 		non-standard amino acids: XXXYZ[Z]. XXX = three-letter abbreviation, Y = one-letter \

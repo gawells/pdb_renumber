@@ -304,7 +304,7 @@ def fix_clash(newresnums,resindices,struct,renumbered_selstr="chain A"):
 			print( "WARNING, solvent resnums clash with new resnums")
 
 			# check for clash between previously ignored ligands and new solvent numbering
-			if hetero_intersection > 0 and hetero:
+			if len(hetero_intersection) > 0 and hetero:
 				hetero_newsolvent_intersection = [x for x in hetero_resnums if x in range(last_biggest,last_biggest+len(solvent_resids))]
 			if len(hetero_newsolvent_intersection) > 0:
 				print ("WARNING, solvent renumbering clashes with ligands")
