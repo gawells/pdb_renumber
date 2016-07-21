@@ -72,11 +72,11 @@ def renumber_noInputAlign(pdbfile,refseqfile,selection="protein",\
 			# os.remove(tmp_pdbseqfile)		
 
 			gpdb.renumber_aln(aln,"refseq",pdbID,first)
-			pdbRenSeq = gpdb.seqbyname(aln, pdbID)		
+			pdbRenSeq = gpdb.seqbyname(aln, pdbID)
 			gpdb.renumber_struct(structure, pdbRenSeq,polymer)
 			pdbRenSeq.annotations["resnum"]=str(pdbRenSeq.letter_annotations["resnum"])
 			modified_selections.append(polymer)
-			# seems to be the only way to store per residue annotations
+			# seems to be the only way to store pret residue annotations
 			# AlignIO.write(aln,"pdb.outseq","seqxml")		
 		else:
 			print ('ERROR: Selection \"%s\" has zero CA atoms'%polymer)

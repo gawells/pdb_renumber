@@ -318,7 +318,7 @@ def renumber_struct(struct,seq,selection="chain A"):
 	'''
 	Renmuber residues in struct according to "resnum" letter annotation of seq. If 
 	new numbers conflict with existing resnums of ligands and solvent these must be
-	renumbered first. Otherwise, indexing in prody getis confused and only protein 
+	renumbered first. Otherwise, indexing in prody gets confused and only protein 
 	resindices can be accessed. Therefore fixing clashes cannot be done after 
 	renumbering proteins.
 
@@ -350,7 +350,8 @@ def renumber_struct(struct,seq,selection="chain A"):
 			'to-be-renumbered residues (%d)\n'%(num_newresnums,num_resindices))
 		print( 'Make certain the correct reference sequence was chosen\n'+\
 		 		'and that none of the structure sequence is aligned to \n'+\
-		 		'gaps. Possible cause: affinity tags etc')
+		 		'gaps. Possible cause: affinity tags etc. Consider using\n'+\
+		 		'the "and not sequence XYZ" selector to exclude linkers etc.')
 
 		exit(1)
 
@@ -359,7 +360,6 @@ def write_renumbered(aln,pdbid,pchain):
 	nr1_struct = parsePDB(pdbid,chain=pchain)
 	renumber_struct(nr1_struct, "chain %s"%pchain)
 	writePDB("%s_%s.renumbered.pdb"%(pdbid,pchain),nr1_struct)
-	pass
 
 
 def showoverlap(seqid1,seqid2,aln):
